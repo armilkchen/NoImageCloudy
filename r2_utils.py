@@ -6,7 +6,7 @@ import os
 import hashlib
 import requests
 import boto3
-from config import R2_ACCESS_KEY, R2_SECRET_KEY, R2_BUCKET, R2_ENDPOINT, IMAGE_PREFIX, VERBOSE_OUTPUT
+from config import R2_ACCESS_KEY, R2_SECRET_KEY, R2_BUCKET, R2_ENDPOINT, IMAGE_PREFIX, VERBOSE_OUTPUT, CUSTOM_IMAGE_DOMAIN
 
 def download_image(url, save_path):
     """
@@ -51,11 +51,10 @@ def upload_to_r2(local_path, object_name):
             endpoint_url=R2_ENDPOINT,
         )
         s3.upload_file(local_path, R2_BUCKET, object_name)
-        # R2 的公开访问链接格式
-        url = f"{R2_ENDPOINT}/{R2_BUCKET}/{object_name}"
+        # 返回R2的存储路径（不带域名）
         if VERBOSE_OUTPUT:
-            print(f"上传到R2成功: {url}")
-        return url
+            print(f"上传到R2成功: {object_name}")
+        return object_name
     except Exception as e:
         print(f"上传到R2失败: {local_path}，原因: {e}")
         return None
@@ -63,31 +62,25 @@ def upload_to_r2(local_path, object_name):
 def process_image(img_url):
     """
     处理图片：下载、上传到R2并返回新的URL
-    
-    参数:
-        img_url (str): 原始图片URL
-        
-    返回:
-        str: 处理后的图片URL（如果处理失败则返回原URL）
+    优先使用自定义域名生成图片访问链接
     """
-    # 用图片链接的hash作为文件名，避免重复
     img_hash = hashlib.md5(img_url.encode("utf-8")).hexdigest()
-    ext = os.path.splitext(img_url)[-1].split("?")[0] or ".jpg"  # 获取扩展名，默认为.jpg
+    ext = os.path.splitext(img_url)[-1].split("?")[0] or ".jpg"
     local_path = f"tmp_{img_hash}{ext}"
-    
     try:
-        # 1. 下载图片
         if download_image(img_url, local_path):
-            # 2. 上传到R2
-            r2_url = upload_to_r2(local_path, f"{IMAGE_PREFIX}/{img_hash}{ext}")
-            # 3. 删除临时文件
+            object_name = f"{IMAGE_PREFIX}/{img_hash}{ext}"
+            upload_result = upload_to_r2(local_path, object_name)
             os.remove(local_path)
-            # 4. 返回新URL或原URL
-            return r2_url if r2_url else img_url
+            if upload_result:
+                # 优先用自定义域名生成图片URL
+                url = f"{CUSTOM_IMAGE_DOMAIN}/{object_name}"
+                if VERBOSE_OUTPUT:
+                    print(f"图片访问URL: {url}")
+                return url
         return img_url
     except Exception as e:
         print(f"处理图片失败: {img_url}，原因: {e}")
-        # 如果临时文件存在，尝试删除
         if os.path.exists(local_path):
             try:
                 os.remove(local_path)

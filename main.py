@@ -27,19 +27,19 @@ def process_notion_page(page_id):
     # 3. 转换为 Markdown
     markdown_content = to_markdown(title, properties, blocks)
     
-    # 4. 保存为 Markdown 文件
-    # 文件名用标题，如果标题为空则用页面ID
+    # 4. 保存为 Markdown 文件到 doc 文件夹
     filename = f"{title or page_id}.md"
-    # 替换文件名中的非法字符
     filename = "".join([c if c.isalnum() or c in [' ', '.', '_', '-'] else '_' for c in filename])
-    
-    with open(filename, "w", encoding="utf-8") as f:
+    doc_dir = "doc"
+    os.makedirs(doc_dir, exist_ok=True)
+    file_path = os.path.join(doc_dir, filename)
+    with open(file_path, "w", encoding="utf-8") as f:
         f.write(markdown_content)
     
     if VERBOSE_OUTPUT:
-        print(f"已保存为 {filename}")
+        print(f"已保存为 {file_path}")
     
-    return filename
+    return file_path
 
 def main():
     """
