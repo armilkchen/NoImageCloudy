@@ -1,6 +1,7 @@
 # Notion 博客导出工具
 
 这是一个将 Notion 页面导出为 Markdown 格式的工具，支持图片处理（自动上传到 Cloudflare R2 存储）。适合用于博客内容管理、知识库导出等场景。
+详细教程：https://www.chanblog.xyz/blog/20250520-1
 
 ## 功能特点
 
